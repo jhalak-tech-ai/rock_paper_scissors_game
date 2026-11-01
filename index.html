@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rock · Paper · Scissors</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 30% 20%, #1e2a3a, #0b1017 80%);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    .game {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: rgba(18, 25, 36, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 32px;
+      padding: 28px 22px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+    }
+
+    /* ---------- header / score ---------- */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title {
+      font-size: clamp(1rem, 4vw, 1.35rem);
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #7fd4ff, #c7a6ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      white-space: nowrap;
+    }
+
+    .scores {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-family: 'Courier New', monospace;
+    }
+
+    .score-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-width: 64px;
+      padding: 6px 12px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .score-badge.pulse {
+      transform: scale(1.06);
+      box-shadow: 0 0 18px rgba(127, 212, 255, 0.35);
+    }
+
+    .score-label {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #7d8ba1;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: #eaf2ff;
+    }
+
+    .score-badge.player .score-value { color: #7fd4ff; }
+    .score-badge.ai .score-value { color: #ff9f8a; }
+
+    .vs {
+      font-size: 0.75rem;
+      color: #56657c;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* ---------- arena ---------- */
+    .arena {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 150px;
+    }
+
+    .hand {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .hand-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #6b7a91;
+      font-weight: 700;
+    }
+
+    .hand-display {
+      width: 100%;
+      max-width: 140px;
+      aspect-ratio: 1 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(3rem, 16vw, 5rem);
+      border-radius: 28px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s;
+      line-height: 1;
+    }
+
+    .hand-display.shake {
+      animation: shake 0.4s ease;
+    }
+
+    .hand-display.pop {
+      animation: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .hand-display.win {
+      background: rgba(127, 212, 255, 0.12);
+      border-color: rgba(127, 212, 255, 0.5);
+      box-shadow: 0 0 30px rgba(127, 212, 255, 0.2);
+    }
+
+    .hand-display.lose {
+      background: rgba(255, 100, 80, 0.1);
+      border-color: rgba(255, 100, 80, 0.4);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0) rotate(0); }
+      20% { transform: translateX(-6px) rotate(-4deg); }
+      40% { transform: translateX(6px) rotate(4deg); }
+      60% { transform: translateX(-4px) rotate(-2deg); }
+      80% { transform: translateX(4px) rotate(2deg); }
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.85); }
+      60% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .arena-mid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 50px;
+    }
+
+    .result-icon {
+      font-size: 1.4rem;
+      opacity: 0.35;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .result-icon.active {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+
+    /* ---------- status message ---------- */
+    .status {
+      text-align: center;
+      font-size: clamp(0.9rem, 3.5vw, 1.1rem);
+      font-weight: 600;
+      color: #c3cfe2;
+      min-height: 28px;
+      letter-spacing: 0.5px;
+      transition: color 0.25s;
+    }
+
+    .status.win { color: #7fd4ff; }
+    .status.lose { color: #ff9f8a; }
+    .status.draw { color: #c7a6ff; }
+
+    /* ---------- choice buttons ---------- */
+    .choices {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .choice-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px 8px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      font-family: inherit;
+      color: inherit;
+      transition: transform 0.18s ease, background 0.25s, border-color 0.25s, box-shadow 0.25s;
+      touch-action: manipulation;
+    }
+
+    .choice-btn:hover:not(:disabled) {
+      background: rgba(127, 212, 255, 0.1);
+      border-color: rgba(127, 212, 255, 0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+    }
+
+    .choice-btn:active:not(:disabled) {
+      transform: translateY(-1px) scale(0.98);
+    }
+
+    .choice-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .choice-emoji {
+      font-size: clamp(2rem, 9vw, 2.8rem);
+      line-height: 1;
+    }
+
+    .choice-name {
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #8b9ab1;
+    }
+
+    /* ---------- footer / controls ---------- */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .round-info {
+      font-size: 11px;
+      color: #56657c;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    .reset-btn {
+      padding: 10px 18px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #b7c6dd;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.25s, border-color 0.25s, color 0.25s;
+      font-family: inherit;
+    }
+
+    .reset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: #eaf2ff;
+    }
+
+    /* ---------- responsive tweaks ---------- */
+    @media (max-width: 480px) {
+      .game {
+        padding: 20px 14px;
+        gap: 16px;
+        border-radius: 24px;
+      }
+
+      .scores { gap: 5px; }
+
+      .score-badge {
+        min-width: 52px;
+        padding: 4px 8px;
+      }
+
+      .score-label { font-size: 8px; }
+
+      .arena { min-height: 120px; }
+
+      .hand-display {
+        border-radius: 20px;
+        max-width: 110px;
+      }
+
+      .choices { gap: 8px; }
+
+      .choice-btn {
+        padding: 12px 6px;
+        border-radius: 18px;
+      }
+
+      .choice-name { font-size: 9px; letter-spacing: 1px; }
+
+      .reset-btn {
+        padding: 8px 14px;
+        font-size: 10px;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .score-badge { min-width: 46px; }
+      .hand-display { max-width: 92px; }
+      .choice-emoji { font-size: 1.8rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="game" role="application" aria-label="Rock Paper Scissors game">
+    <!-- Header: title + score -->
+    <header class="header">
+      <h1 class="title">Rock · Paper · Scissors</h1>
+      <div class="scores">
+        <div class="score-badge player" id="playerScoreBadge">
+          <span class="score-label">You</span>
+          <span class="score-value" id="playerScore">0</span>
+        </div>
+        <span class="vs">VS</span>
+        <div class="score-badge ai" id="aiScoreBadge">
+          <span class="score-label">CPU</span>
+          <span class="score-value" id="aiScore">0</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Arena: player vs AI hands -->
+    <section class="arena" aria-label="Hands">
+      <div class="hand">
+        <span class="hand-label">You</span>
+        <div class="hand-display" id="playerHand" aria-live="polite">❔</div>
+      </div>
+      <div class="arena-mid">
+        <span class="result-icon" id="resultIcon">⚡</span>
+      </div>
+      <div class="hand">
+        <span class="hand-label">CPU</span>
+        <div class="hand-display" id="aiHand" aria-live="polite">❔</div>
+      </div>
+    </section>
+
+    <!-- Status message -->
+    <p class="status" id="status" aria-live="polite">Choose your weapon to begin!</p>
+
+    <!-- Choice buttons -->
+    <section class="choices" aria-label="Choose your move">
+      <button class="choice-btn" data-choice="rock" aria-label="Rock">
+        <span class="choice-emoji">🪨</span>
+        <span class="choice-name">Rock</span>
+      </button>
+      <button class="choice-btn" data-choice="paper" aria-label="Paper">
+        <span class="choice-emoji">📄</span>
+        <span class="choice-name">Paper</span>
+      </button>
+      <button class="choice-btn" data-choice="scissors" aria-label="Scissors">
+        <span class="choice-emoji">✂️</span>
+        <span class="choice-name">Scissors</span>
+      </button>
+    </section>
+
+    <!-- Footer: round counter + reset -->
+    <footer class="footer">
+      <span class="round-info" id="roundInfo">Round 1 · First to 5 wins</span>
+      <button class="reset-btn" id="resetBtn" aria-label="Reset game">Reset</button>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ---------- constants ----------
+      const CHOICES = ['rock', 'paper', 'scissors'];
+      const EMOJI = { rock: '🪨', paper: '📄', scissors: '✂️' };
+      const BEATS = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
+      const WIN_SCORE = 5; // first to 5 wins
+
+      // ---------- state ----------
+      let playerScore = 0;
+      let aiScore = 0;
+      let round = 1;
+      let gameOver = false;
+      let isAnimating = false;
+      let roundTimer = null;
+
+      // ---------- DOM refs ----------
+      const playerScoreEl = document.getElementById('playerScore');
+      const aiScoreEl = document.getElementById('aiScore');
+      const playerScoreBadge = document.getElementById('playerScoreBadge');
+      const aiScoreBadge = document.getElementById('aiScoreBadge');
+      const playerHandEl = document.getElementById('playerHand');
+      const aiHandEl = document.getElementById('aiHand');
+      const statusEl = document.getElementById('status');
+      const resultIconEl = document.getElementById('resultIcon');
+      const roundInfoEl = document.getElementById('roundInfo');
+      const resetBtn = document.getElementById('resetBtn');
+      const choiceButtons = Array.from(document.querySelectorAll('.choice-btn'));
+
+      // ---------- helpers ----------
+      function getAIChoice() {
+        return CHOICES[Math.floor(Math.random() * CHOICES.length)];
+      }
+
+      function determineResult(player, ai) {
+        if (player === ai) return 'draw';
+        return BEATS[player] === ai ? 'win' : 'lose';
+      }
+
+      function setStatus(text, type) {
+        statusEl.textContent = text;
+        statusEl.className = 'status' + (type ? ' ' + type : '');
+      }
+
+      function updateScoresUI() {
+        playerScoreEl.textContent = playerScore;
+        aiScoreEl.textContent = aiScore;
+      }
+
+      function updateRoundInfo() {
+        if (gameOver) return;
+        roundInfoEl.textContent = `Round ${round} · First to ${WIN_SCORE} wins`;
+      }
+
+      function clearAnimations(el) {
+        el.classList.remove('pop', 'shake', 'win', 'lose');
+      }
+
+      function triggerBadgePulse(badge) {
+        badge.classList.remove('pulse');
+        // force reflow to restart animation
+        void badge.offsetWidth;
+        badge.classList.add('pulse');
+        setTimeout(() => badge.classList.remove('pulse'), 350);
+      }
+
+      // ---------- end game ----------
+      function endGame() {
+        gameOver = true;
+        choiceButtons.forEach((btn) => (btn.disabled = true));
+        if (playerScore > aiScore) {
+          setStatus(`🎉 You win the match ${playerScore}–${aiScore}!`, 'win');
+        } else {
+          setStatus(`💀 CPU wins the match ${aiScore}–${playerScore}. Try again!`, 'lose');
+        }
+        roundInfoEl.textContent = 'Match over';
+        resultIconEl.textContent = playerScore > aiScore ? '🏆' : '💀';
+        resultIconEl.classList.add('active');
+      }
+
+      // ---------- main play round ----------
+      function playRound(playerChoice) {
+        if (gameOver || isAnimating) return;
+
+        isAnimating = true;
+        choiceButtons.forEach((btn) => (btn.disabled = true));
+
+        // reset visuals
+        clearAnimations(playerHandEl);
+        clearAnimations(aiHandEl);
+        resultIconEl.classList.remove('active');
+
+        const aiChoice = getAIChoice();
+        const result = determineResult(playerChoice, aiChoice);
+
+        // 1) "shaking" phase before reveal
+        playerHandEl.textContent = '✊';
+        aiHandEl.textContent = '✊';
+        playerHandEl.classList.add('shake');
+        aiHandEl.classList.add('shake');
+        setStatus('Rock… Paper… Scissors…');
+
+        // 2) reveal after short delay
+        roundTimer = setTimeout(() => {
+          clearAnimations(playerHandEl);
+          clearAnimations(aiHandEl);
+
+          playerHandEl.textContent = EMOJI[playerChoice];
+          aiHandEl.textContent = EMOJI[aiChoice];
+
+          playerHandEl.classList.add('pop');
+          aiHandEl.classList.add('pop');
+
+          // highlight result
+          if (result === 'win') {
+            playerHandEl.classList.add('win');
+            aiHandEl.classList.add('lose');
+            resultIconEl.textContent = '✅';
+            playerScore++;
+            setStatus(`You win! ${EMOJI[playerChoice]} beats ${EMOJI[aiChoice]}`, 'win');
+            triggerBadgePulse(playerScoreBadge);
+          } else if (result === 'lose') {
+            playerHandEl.classList.add('lose');
+            aiHandEl.classList.add('win');
+            resultIconEl.textContent = '❌';
+            aiScore++;
+            setStatus(`CPU wins! ${EMOJI[aiChoice]} beats ${EMOJI[playerChoice]}`, 'lose');
+            triggerBadgePulse(aiScoreBadge);
+          } else {
+            resultIconEl.textContent = '🤝';
+            setStatus(`Draw! Both chose ${EMOJI[playerChoice]}`, 'draw');
+          }
+
+          resultIconEl.classList.add('active');
+          updateScoresUI();
+
+          // 3) check win condition
+          if (playerScore >= WIN_SCORE || aiScore >= WIN_SCORE) {
+            roundTimer = setTimeout(() => {
+              endGame();
+              isAnimating = false;
+            }, 800);
+            return;
+          }
+
+          // 4) prepare next round
+          round++;
+          updateRoundInfo();
+
+          roundTimer = setTimeout(() => {
+            isAnimating = false;
+            if (!gameOver) {
+              choiceButtons.forEach((btn) => (btn.disabled = false));
+              setStatus('Choose your next move!');
+              resultIconEl.classList.remove('active');
+            }
+          }, 1100);
+        }, 650);
+      }
+
+      // ---------- reset ----------
+      function resetGame() {
+        if (roundTimer) {
+          clearTimeout(roundTimer);
+          roundTimer = null;
+        }
+        playerScore = 0;
+        aiScore = 0;
+        round = 1;
+        gameOver = false;
+        isAnimating = false;
+
+        updateScoresUI();
+        updateRoundInfo();
+
+        playerHandEl.textContent = '❔';
+        aiHandEl.textContent = '❔';
+        clearAnimations(playerHandEl);
+        clearAnimations(aiHandEl);
+        resultIconEl.textContent = '⚡';
+        resultIconEl.classList.remove('active');
+
+        setStatus('Choose your weapon to begin!');
+
+        choiceButtons.forEach((btn) => (btn.disabled = false));
+      }
+
+      // ---------- event listeners ----------
+      choiceButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const choice = btn.dataset.choice;
+          if (CHOICES.includes(choice)) playRound(choice);
+        });
+      });
+
+      resetBtn.addEventListener('click', resetGame);
+
+      // keyboard support: 1/2/3 keys and R for reset
+      window.addEventListener('keydown', (e) => {
+        const key = e.key.toLowerCase();
+        if (key === '1') playRound('rock');
+        else if (key === '2') playRound('paper');
+        else if (key === '3') playRound('scissors');
+        else if (key === 'r') resetGame();
+        else if (key === ' ') {
+          // space does nothing special but prevents page scroll
+          e.preventDefault();
+        }
+      });
+
+      // prevent double-tap zoom on mobile
+      document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+      // ---------- init ----------
+      resetGame();
+    })();
+  </script>
+</body>
+</html>
